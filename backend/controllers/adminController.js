@@ -53,19 +53,19 @@ export const updateUserRoleAndMembership = async (req, res, next) => {
 
         // Update user fields
         const [result] = await connection.query(
-            'UPDATE users SET user_role = ?, is_committee_member = ? WHERE id = ?',
+            'UPDATE users SET user_role = ?, is_committee_member = ? WHERE user_id = ?',
             [user_role, is_committee_member, id]
         );
 
         if (result.affectedRows === 0) {
             throw new ErrorResponse('Failed to update user.', 500);
         }
-
+        
         // Log the action
         await ComplaintLog.create({
             complaint_id: null, // No specific complaint, this is a user management action
             action_taken: 'User Role Updated',
-            performed_by: req.user.id,
+            performed_by_user_id: req.user.user_id,
             action_role: req.user.user_role,
             remarks: `Updated role of user ${user.name} (ID: ${id}) to ${user_role}, Committee Member: ${is_committee_member}`
         }, connection);
@@ -100,7 +100,7 @@ export const getAllComplaints = async (req, res, next) => {
 export const getUnassignedComplaints = async (req, res, next) => {
     try {
         const [rows] = await pool.query(
-            "SELECT * FROM complaints WHERE status = 'Pending' AND assigned_to IS NULL"
+            "SELECT * FROM complaints WHERE status = 'Pending' AND assigned_to_user_id IS NULL"
         );
         res.status(200).json({ success: true, data: rows });
     } catch (err) {
@@ -118,9 +118,9 @@ export const getEscalatedComplaints = async (req, res, next) => {
         const [rows] = await pool.query(
             "SELECT c.*, e.reason AS escalation_reason, u_from.name AS escalated_from_name, u_to.name AS escalated_to_name " +
             "FROM complaints c " +
-            "JOIN escalations e ON c.id = e.complaint_id " +
-            "LEFT JOIN users u_from ON e.escalated_from = u_from.id " +
-            "LEFT JOIN users u_to ON e.escalated_to = u_to.id " +
+            "JOIN escalations e ON c.complaint_id = e.complaint_id " +
+            "LEFT JOIN users u_from ON e.escalated_from_user_id = u_from.user_id " +
+            "LEFT JOIN users u_to ON e.escalated_to_user_id = u_to.user_id " +
             "WHERE c.status = 'Escalated'"
         );
         res.status(200).json({ success: true, data: rows });
@@ -139,7 +139,7 @@ export const getAssignedComplaintsForAdmin = async (req, res, next) => {
         const [rows] = await pool.query(
             `SELECT c.*, u.name as assigned_to_name 
              FROM complaints c 
-             JOIN users u ON c.assigned_to = u.id 
+             JOIN users u ON c.assigned_to_user_id = u.user_id 
              WHERE c.status = 'In Progress'`
         );
         res.status(200).json({ success: true, data: rows });
@@ -227,16 +227,16 @@ export const deleteComplaint = async (req, res, next) => {
     const connection = await pool.getConnection();
     await connection.beginTransaction();
     try {
-        const [result] = await connection.query('DELETE FROM complaints WHERE id = ?', [id]);
+        const [result] = await connection.query('DELETE FROM complaints WHERE complaint_id = ?', [id]);
 
         if (result.affectedRows === 0) {
             throw new ErrorResponse('Complaint not found or already deleted.', 404);
         }
 
         await ComplaintLog.create({
-            complaint_id: id,
+            complaint_id: parseInt(id),
             action_taken: 'Deleted',
-            performed_by: req.user.id,
+            performed_by_user_id: req.user.user_id,
             action_role: req.user.user_role,
             remarks: `Complaint (ID: ${id}) deleted by Admin.`
         }, connection);

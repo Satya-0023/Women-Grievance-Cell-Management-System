@@ -126,7 +126,7 @@ export default function Admin() {
         setSelectedGrievance(complaint);
         setAssignFormData({ assignedToId: '' });
         try {
-            const res = await axios.get(`/grievances/${complaint.id}/available-members`);
+            const res = await axios.get(`/grievances/${complaint.complaint_id}/available-members`);
             setAvailableMembers(res.data);
             setAssignModalOpen(true);
         } catch (err) {
@@ -140,7 +140,7 @@ export default function Admin() {
         setIsDetailsLoading(true);
         setComplaintDetails(null); // Clear previous details
         try {
-            const res = await axios.get(`/grievances/${complaint.id}`);
+            const res = await axios.get(`/grievances/${complaint.complaint_id}`);
             setComplaintDetails(res.data);
         } catch (err) {
             toast.error("Failed to fetch complaint details.");
@@ -158,7 +158,7 @@ export default function Admin() {
         }
         const toastId = toast.loading("Assigning complaint...");
         try {
-            await axios.put(`/grievances/assign/${selectedGrievance.id}`, { assignedToId: assignFormData.assignedToId });
+            await axios.put(`/grievances/assign/${selectedGrievance.complaint_id}`, { assignedToId: assignFormData.assignedToId });
             toast.success("Complaint assigned successfully.", { id: toastId });
             setAssignModalOpen(false);
             fetchData(); // Re-fetch data to update the lists
@@ -182,7 +182,7 @@ export default function Admin() {
         const toastId = toast.loading("Resolving grievance...");
         try {
             // The Admin uses the same resolution endpoint as a committee member
-            await axios.put(`/grievances/resolve/${selectedGrievance.id}`, resolveFormData);
+            await axios.put(`/grievances/resolve/${selectedGrievance.complaint_id}`, resolveFormData);
             toast.success("Grievance resolved successfully.", { id: toastId });
             setResolveModalOpen(false);
             fetchData(); // Re-fetch all data to update the dashboard
@@ -216,7 +216,7 @@ export default function Admin() {
         e.preventDefault();
         const toastId = toast.loading("Updating user...");
         try {
-            await axios.put(`/admin/users/${selectedUser.id}`, editUserFormData);
+            await axios.put(`/admin/users/${selectedUser.user_id}`, editUserFormData);
             toast.success("User updated successfully.", { id: toastId });
             setEditUserModalOpen(false);
             fetchData(); // Re-fetch data to update the user list
@@ -327,8 +327,8 @@ export default function Admin() {
                                 </thead>
                                 <tbody>
                                     {unassignedComplaints.map(c => (
-                                        <tr key={c.id} className="border-t">
-                                            <td className="p-3 font-mono text-sm">#{c.id}</td>
+                                        <tr key={c.complaint_id} className="border-t">
+                                            <td className="p-3 font-mono text-sm">#{c.complaint_id}</td>
                                             <td className="p-3 font-semibold text-gray-800">{c.title}</td>
                                             <td className="p-3">{c.category}</td>
                                             <td className="p-3">{formatDate(c.assigned_date)}</td>
@@ -362,8 +362,8 @@ export default function Admin() {
                                 </thead>
                                 <tbody>
                                     {assignedComplaints.map(c => (
-                                        <tr key={c.id} className="border-t">
-                                            <td className="p-3 font-mono text-sm">#{c.id}</td>
+                                        <tr key={c.complaint_id} className="border-t">
+                                            <td className="p-3 font-mono text-sm">#{c.complaint_id}</td>
                                             <td className="p-3 font-semibold text-gray-800">{c.title}</td>
                                             <td className="p-3">{c.assigned_to_name}</td>
                                             <td className="p-3">{formatDate(c.deadline)}</td>
@@ -395,8 +395,8 @@ export default function Admin() {
                                 </thead>
                                 <tbody>
                                     {escalatedComplaints.map(c => (
-                                        <tr key={c.id} className="border-t">
-                                            <td className="p-3 font-mono text-sm">#{c.id}</td>
+                                        <tr key={c.complaint_id} className="border-t">
+                                            <td className="p-3 font-mono text-sm">#{c.complaint_id}</td>
                                             <td className="p-3 font-semibold text-gray-800">{c.title}</td>
                                             <td className="p-3">{c.escalated_from_name || 'N/A'}</td>
                                             <td className="p-3">{c.escalation_reason}</td>
@@ -405,7 +405,7 @@ export default function Admin() {
                                                     <button onClick={() => openDetailsModal(c)} className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm py-1 px-2 rounded-md">View</button>                                                   
                                                     <button onClick={() => openAssignModal(c)} className="btn bg-blue-500 text-white hover:bg-blue-600 text-sm py-1 px-2 rounded-md">Reassign</button>
                                                     <button onClick={() => openResolveModal(c)} className="btn bg-green-500 text-white hover:bg-green-600 text-sm py-1 px-2 rounded-md">Resolve</button>
-                                                    <button onClick={() => handleDeleteComplaint(c.id)} className="btn bg-red-500 text-white hover:bg-red-600 text-sm py-1 px-2 rounded-md">Delete</button>
+                                                    <button onClick={() => handleDeleteComplaint(c.complaint_id)} className="btn bg-red-500 text-white hover:bg-red-600 text-sm py-1 px-2 rounded-md">Delete</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -484,7 +484,7 @@ export default function Admin() {
                                 </thead>
                                 <tbody>
                                     {allUsers.map(user => (
-                                        <tr key={user.id} className="border-t hover:bg-gray-50">
+                                        <tr key={user.user_id} className="border-t hover:bg-gray-50">
                                             <td className="p-3">{user.name}</td>
                                             <td className="p-3">{user.email}</td>
                                             <td className="p-3">{user.user_role}</td>
@@ -504,7 +504,7 @@ export default function Admin() {
             <Modal
                 isOpen={isAssignModalOpen}
                 onClose={() => setAssignModalOpen(false)}
-                title={`Assign Complaint #${selectedGrievance?.id}`}
+                title={`Assign Complaint #${selectedGrievance?.complaint_id}`}
                 icon={<Send size={24} className="text-blue-600" />}
             >
                 <form onSubmit={handleAssignSubmit} className="space-y-4">
@@ -514,7 +514,7 @@ export default function Admin() {
                             onChange={(e) => setAssignFormData({ assignedToId: e.target.value })}
                             className="w-full p-2 border rounded-lg mt-1" required>
                             <option value="">Select a Member</option>
-                            {availableMembers.map(m => (<option key={m.id} value={m.id}>{m.name} ({m.email})</option>))}
+                            {availableMembers.map(m => (<option key={m.user_id} value={m.user_id}>{m.name} ({m.email})</option>))}
                         </select>
                     </div>
                     <button type="submit" className="w-full px-4 py-2 rounded-lg font-semibold shadow-md transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500">
@@ -561,7 +561,7 @@ export default function Admin() {
             <Modal
                 isOpen={isResolveModalOpen}
                 onClose={() => setResolveModalOpen(false)}
-                title={`Resolve Complaint #${selectedGrievance?.id}`}
+                title={`Resolve Complaint #${selectedGrievance?.complaint_id}`}
                 icon={<ShieldCheck size={24} className="text-green-600" />}
             >
                 <form onSubmit={handleResolveSubmit} className="space-y-4">
@@ -586,7 +586,7 @@ export default function Admin() {
             <Modal
                 isOpen={isDetailsModalOpen}
                 onClose={() => setDetailsModalOpen(false)}
-                title={`Details for Complaint #${complaintDetails?.grievance?.id || selectedGrievance?.id}`}
+                title={`Details for Complaint #${complaintDetails?.grievance?.complaint_id || selectedGrievance?.complaint_id}`}
                 icon={<Eye size={24} className="text-gray-600" />}
             >
                 {isDetailsLoading || !complaintDetails ? <SkeletonLoader /> : (
@@ -607,7 +607,7 @@ export default function Admin() {
                                 <h4 className="font-semibold text-gray-500 mb-2">Evidence</h4>
                                 <ul className="space-y-2">
                                     {complaintDetails.grievance.evidence.map(file => (
-                                        <li key={file.id} className="flex items-center justify-between bg-gray-100 p-2 rounded-lg">
+                                        <li key={file.evidence_id} className="flex items-center justify-between bg-gray-100 p-2 rounded-lg">
                                             <span className="flex items-center gap-2 text-gray-800"><FileText size={16} /> {file.file_name}</span>
                                             <a href={file.file_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800"><Download size={16} /></a>
                                         </li>

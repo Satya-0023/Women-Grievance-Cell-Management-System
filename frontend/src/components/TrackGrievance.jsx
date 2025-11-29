@@ -22,7 +22,7 @@ export default function TrackGrievance() {
         const toastId = toast.loading("Tracking grievance...");
         try {
             const encodedId = encodeURIComponent(grievanceId);
-            const res = await axios.get(`/grievances/track/${encodedId}`);
+            const res = await axios.get(`/grievances/${encodedId}`);
             setGrievanceDetails(res.data.grievance);
             setGrievanceHistory(res.data.history || []);
             toast.success("Grievance found!", { id: toastId });

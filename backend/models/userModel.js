@@ -29,7 +29,7 @@ export const findByEmail = async (email, connection = pool) => {
  * @returns {Promise<object|null>} The user object or null if not found.
  */
 export const findById = async (id, connection = pool) => {
-    const [rows] = await connection.query('SELECT * FROM users WHERE id = ?', [id]);
+    const [rows] = await connection.query('SELECT * FROM users WHERE user_id = ?', [id]);
     return rows[0] || null;
 };
 
@@ -63,7 +63,7 @@ export const updatePassword = async (email, passwordHash) => {
  */
 export const findCommitteeMembers = async () => {
     const [rows] = await pool.query(
-        `SELECT id, name, email, designation 
+        `SELECT user_id, name, email, designation 
          FROM users 
          WHERE is_committee_member = TRUE`
     );
@@ -76,7 +76,7 @@ export const findCommitteeMembers = async () => {
  */
 export const findAll = async () => {
     const [rows] = await pool.query(
-        `SELECT id, name, email, gender, user_role, is_committee_member, roll_no, designation, created_at 
+        `SELECT user_id, name, email, gender, user_role, is_committee_member, roll_no, designation, created_at 
          FROM users 
          ORDER BY created_at DESC`
     );
@@ -90,10 +90,10 @@ export const findAll = async () => {
  * @returns {Promise<Array>} An array of committee member user objects.
  */
 export const findAvailableCommitteeMembers = async (excludeId = null) => {
-    let query = `SELECT id, name, email, designation FROM users WHERE is_committee_member = TRUE`;
+    let query = `SELECT user_id, name, email, designation FROM users WHERE is_committee_member = TRUE`;
     const params = [];
     if (excludeId) {
-        query += ` AND id != ?`;
+        query += ` AND user_id != ?`;
         params.push(excludeId);
     }
     const [rows] = await pool.query(query, params);

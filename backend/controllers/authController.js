@@ -8,7 +8,7 @@ const otpStore = new Map();
 const generateToken = (user) => {
     // The payload contains the user's ID and their capabilities
     const payload = {
-        id: user.id,
+        id: user.user_id,
         email: user.email,
         user_role: user.user_role,
         is_committee_member: user.is_committee_member
@@ -55,9 +55,8 @@ export const registerUser = async (req, res, next) => {
             password_hash: hashedPassword,
             gender,
             user_role,
-            // NEW RULE: Automatically make male staff members committee members.
-            // For all other cases (Female Staff, Students), this will correctly evaluate to false.
-            is_committee_member: (user_role === 'Staff' && gender === 'Male'),
+            // CORRECTED LOGIC: Convert the boolean result to a number (1 for true, 0 for false) for database compatibility.
+            is_committee_member: (user_role === 'Staff' && gender === 'Male') ? 1 : 0,
             roll_no: user_role === 'Student' ? roll_no : null,
             designation: user_role === 'Staff' ? designation : null,
         };

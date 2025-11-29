@@ -86,7 +86,7 @@ export default function CommitteeMember() {
         setIsDetailsLoading(true);
         setComplaintDetails(null);
         try {
-            const res = await axios.get(`/grievances/${grievance.id}`);
+            const res = await axios.get(`/grievances/${grievance.complaint_id}`);
             setComplaintDetails(res.data);
         } catch (err) {
             toast.error("Failed to fetch complaint details.");
@@ -109,7 +109,7 @@ export default function CommitteeMember() {
 
         const toastId = toast.loading("Resolving grievance...");
         try {
-            await axios.put(`/grievances/resolve/${selectedGrievance.id}`, {
+            await axios.put(`/grievances/resolve/${selectedGrievance.complaint_id}`, {
                 action_taken: resolveFormData.action_taken,
                 remarks: resolveFormData.remarks
             });
@@ -186,8 +186,8 @@ export default function CommitteeMember() {
                                 </thead>
                                 <tbody>
                                     {sortedGrievances.length > 0 ? sortedGrievances.map(g => (
-                                        <tr key={g.id} className="odd:bg-white even:bg-rose-50 hover:bg-rose-100 transition">
-                                            <td className="py-3 px-4 font-mono text-sm">#{g.id}</td>
+                                        <tr key={g.complaint_id} className="odd:bg-white even:bg-rose-50 hover:bg-rose-100 transition">
+                                            <td className="py-3 px-4 font-mono text-sm">#{g.complaint_id}</td>
                                             <td className="py-3 px-4 font-semibold text-gray-800">{g.title}</td>
                                             <td className="py-3 px-4">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${g.status === 'Resolved' ? 'bg-green-100 text-green-700' : g.status === 'In Progress' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>
@@ -217,7 +217,7 @@ export default function CommitteeMember() {
             <Modal isOpen={isResolveModalOpen} onClose={() => setResolveModalOpen(false)} title="Resolve Grievance" icon={<CheckCircle size={24} className="text-green-600" />}>
                 {selectedGrievance && (
                     <div className="text-sm text-gray-500 mb-4 p-3 bg-gray-50 rounded-lg border">
-                        <p><strong>Complaint ID:</strong> #{selectedGrievance.id}</p>
+                        <p><strong>Complaint ID:</strong> #{selectedGrievance.complaint_id}</p>
                         <p><strong>Title:</strong> {selectedGrievance.title}</p>
                     </div>
                 )}
@@ -244,7 +244,7 @@ export default function CommitteeMember() {
             <Modal
                 isOpen={isDetailsModalOpen}
                 onClose={() => setDetailsModalOpen(false)}
-                title={`Details for Complaint #${complaintDetails?.grievance?.id || selectedGrievance?.id}`}
+                title={`Details for Complaint #${complaintDetails?.grievance?.complaint_id || selectedGrievance?.complaint_id}`}
                 icon={<Eye size={24} className="text-gray-600" />}
             >
                 {isDetailsLoading || !complaintDetails ? <SkeletonLoader /> : (
@@ -265,7 +265,7 @@ export default function CommitteeMember() {
                                 <h4 className="font-semibold text-gray-500 mb-2">Evidence</h4>
                                 <ul className="space-y-2">
                                     {complaintDetails.grievance.evidence.map(file => (
-                                        <li key={file.id} className="flex items-center justify-between bg-gray-100 p-2 rounded-lg">
+                                        <li key={file.evidence_id} className="flex items-center justify-between bg-gray-100 p-2 rounded-lg">
                                             <span className="flex items-center gap-2 text-gray-800"><FileText size={16} /> {file.file_name}</span>
                                             <a href={file.file_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800"><Download size={16} /></a>
                                         </li>

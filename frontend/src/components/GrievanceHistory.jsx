@@ -89,15 +89,15 @@ const GrievanceHistory = () => {
                         </thead>
                         <tbody>
                             {sortedGrievances.length > 0 ? sortedGrievances.map((g, index) => (
-                                <tr key={g.id || index} className="border-t hover:bg-rose-100 transition-colors">
-                                    <td className="p-3 font-mono text-sm">#{g.id}</td>
+                                <tr key={g.complaint_id || index} className="border-t hover:bg-rose-100 transition-colors">
+                                    <td className="p-3 font-mono text-sm">#{g.complaint_id}</td>
                                     <td className="p-3">{g.title}</td>
                                     <td className="p-3">
                                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusClass(g.status)}`}>
                                             {g.status}
                                         </span>
                                     </td>
-                                    <td className="p-3">{new Date(g.created_at).toLocaleDateString()}</td>
+                                    <td className="p-3">{new Date(g.updated_at).toLocaleDateString()}</td>
                                 </tr>
                             )) : (
                                 <tr><td colSpan="4" className="text-center p-4 text-gray-500">You have not submitted any grievances yet.</td></tr>

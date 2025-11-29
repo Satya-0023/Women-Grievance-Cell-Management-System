@@ -99,7 +99,7 @@ export default function SubmitGrievance() {
             data.append("category", formData.category); // Send category as a string
             if (formData.attachment) data.append("evidence", formData.attachment); // Corrected field name
 
-            const res = await axios.post("/grievances/submit", data);
+            const res = await axios.post("/grievances", data);
 
             toast.success(
                 (t) => (

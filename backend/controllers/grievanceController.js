@@ -56,7 +56,7 @@ const calculateDeadline = (slaHours) => {
 
 export const getUserGrievanceHistory = async (req, res, next) => {
     // req.user is populated by the 'protect' middleware
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     try {
         const grievances = await Complaint.findAllByUserId(userId);
         res.json(grievances);
@@ -70,7 +70,7 @@ export const submitGrievance = async (req, res, next) => {
     await connection.beginTransaction();
 
     try {
-        const user = await User.findById(req.user.id, connection);
+        const user = await User.findById(req.user.user_id, connection);
         if (!user) {
             return next(new ErrorResponse('Complainant user not found.', 404));
         }
@@ -81,7 +81,7 @@ export const submitGrievance = async (req, res, next) => {
             return next(new ErrorResponse('This action is restricted to female users only.', 403)); // 403 Forbidden
         }
 
-        const userId = user.id;
+        const userId = user.user_id;
         const { title, description, category } = req.body;
         // --- URGENCY-BASED DEADLINE LOGIC ---
         let urgency = 'Medium';
@@ -102,12 +102,13 @@ export const submitGrievance = async (req, res, next) => {
         const deadline = calculateDeadline(slaHours);
 
         const complaintData = {
-            complainant_id: userId,
+            user_id: userId,
             title,
             description,
             category,
             urgency,
-            deadline
+            deadline,
+            assigned_date: new Date() // Set the assignment date to the submission time
         };
 
         const complaintId = await Complaint.create(complaintData, connection);
@@ -123,14 +124,14 @@ export const submitGrievance = async (req, res, next) => {
                 complaint_id: complaintId,
                 file_name: req.file.originalname,
                 file_url: uploadResponse.url,
-                uploaded_by: userId
+                uploaded_by_user_id: userId
             }, connection);
         }
 
         // Create initial action log
         await ComplaintLog.create({
             complaint_id: complaintId,
-            performed_by: userId,
+            performed_by_user_id: userId,
             action_taken: 'Submitted',
             action_role: user.user_role,
             remarks: 'Complaint submitted by user.'
@@ -167,7 +168,7 @@ export const submitGrievance = async (req, res, next) => {
 export const getAssignedGrievances = async (req, res, next) => {
     try {
         // The user's ID is attached to the request by the 'protect' middleware
-        const committeeMemberId = req.user.id;
+        const committeeMemberId = req.user.user_id;
 
         // Find all complaints where 'assigned_to' matches the logged-in user's ID
         const grievances = await Complaint.findAllByAssignedToId(committeeMemberId);
@@ -188,21 +189,21 @@ export const trackGrievance = async (req, res, next) => {
         }
 
         // --- REVISED AUTHORIZATION LOGIC ---
-        const isComplainant = req.user.id === complaint.complainant_id;
+        const isComplainant = req.user.user_id === complaint.user_id;
         const isAdmin = req.user.user_role === 'Admin';
         // A committee member is only authorized if the complaint is specifically assigned to them.
-        const isAssignedMember = req.user.is_committee_member === 1 && req.user.id === complaint.assigned_to;
+        const isAssignedMember = req.user.is_committee_member === true && req.user.user_id === complaint.assigned_to_user_id;
 
         if (!isComplainant && !isAdmin && !isAssignedMember) {
             return next(new ErrorResponse('Not authorized to view this grievance', 403));
         }
 
-        const logs = await ComplaintLog.findAllByComplaintId(complaint.id);
-        const evidence = await Evidence.findAllByComplaintId(complaint.id);
+        const logs = await ComplaintLog.findAllByComplaintId(complaint.complaint_id);
+        const evidence = await Evidence.findAllByComplaintId(complaint.complaint_id);
         let resolution = null;
 
         if (complaint.status === 'Resolved') {
-            resolution = await Resolution.findByComplaintId(complaint.id);
+            resolution = await Resolution.findByComplaintId(complaint.complaint_id);
         }
 
         res.json({ grievance: { ...complaint, resolution, evidence }, history: logs });
@@ -226,7 +227,7 @@ export const getAvailableCommitteeMembers = async (req, res, next) => {
         }
 
         // Fetch committee members, excluding the person who filed the complaint.
-        const results = await User.findAvailableCommitteeMembers(complaint.complainant_id);
+        const results = await User.findAvailableCommitteeMembers(complaint.user_id);
         res.status(200).json(results);
     } catch (err) {
         next(new ErrorResponse('DB error fetching available committee members', 500));
@@ -247,7 +248,7 @@ export const assignGrievance = async (req, res, next) => {
         }
 
         // Business Rule: Prevent self-assignment
-        if (complaint.complainant_id === parseInt(assignedToId, 10)) {
+        if (complaint.user_id === parseInt(assignedToId, 10)) {
             return next(new ErrorResponse('Cannot assign a complaint to the complainant.', 400));
         }
 
@@ -256,15 +257,15 @@ export const assignGrievance = async (req, res, next) => {
         // Re-fetch the full complaint details to ensure all fields are available for the email
         const fullComplaint = await Complaint.findById(id, connection);
         const member = await User.findById(assignedToId, connection);
-        const complainant = await User.findById(complaint.complainant_id, connection);
+        const complainant = await User.findById(complaint.user_id, connection);
 
         if (!fullComplaint || !member || !complainant) {
             throw new ErrorResponse('Could not retrieve details for notification.', 404);
         }
 
         await ComplaintLog.create({
-            complaint_id: complaint.id,
-            performed_by: actor.id,
+            complaint_id: complaint.complaint_id,
+            performed_by_user_id: actor.user_id,
             action_taken: 'Assigned',
             action_role: actor.user_role,
             remarks: `Assigned to committee member: ${member.name}`
@@ -294,7 +295,7 @@ export const resolveGrievance = async (req, res, next) => {
     try {
         const { id } = req.params; // complaint ID
         const { action_taken, remarks } = req.body;
-        const resolvedById = req.user.id; // User resolving the grievance
+        const resolvedById = req.user.user_id; // User resolving the grievance
 
         const complaint = await Complaint.findById(id, connection);
         if (!complaint) {
@@ -302,22 +303,22 @@ export const resolveGrievance = async (req, res, next) => {
         }
 
         // Security Enhancement: Ensure a committee member can only resolve complaints assigned to them.
-        if (req.user.user_role !== 'Admin' && complaint.assigned_to !== resolvedById) {
+        if (req.user.user_role !== 'Admin' && complaint.assigned_to_user_id !== resolvedById) {
             throw new ErrorResponse('You are not authorized to resolve this grievance.', 403);
         }
 
-        await Complaint.updateStatus(complaint.id, 'Resolved', connection);
+        await Complaint.updateStatus(complaint.complaint_id, 'Resolved', connection);
 
         await Resolution.create({
-            complaint_id: complaint.id,
-            resolved_by: resolvedById,
+            complaint_id: complaint.complaint_id,
+            resolved_by_user_id: resolvedById,
             action_taken,
             remarks
         }, connection);
 
         await ComplaintLog.create({
-            complaint_id: complaint.id,
-            performed_by: resolvedById,
+            complaint_id: complaint.complaint_id,
+            performed_by_user_id: resolvedById,
             action_taken: 'Resolved',
             action_role: req.user.user_role,
             remarks: remarks,
@@ -326,7 +327,7 @@ export const resolveGrievance = async (req, res, next) => {
         await connection.commit();
 
         try {
-            const complainant = await User.findById(complaint.complainant_id);
+            const complainant = await User.findById(complaint.user_id);
             if (complainant) {
                 await sendGrievanceStatusUpdateEmail(complainant.email, complainant.name, id, 'Resolved');
             }
