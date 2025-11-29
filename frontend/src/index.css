@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+/*
+  * Root color scheme aligned with the WGCMS rose/indigo theme.
+*/
+:root {
+  --primary-rose: #E11D48;
+  --primary-indigo: #4F46E5;
+  --light-gray-bg: #f8f9fa;
+  --accent-rose: #FFF1F2;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  /* A modern, readable font */
+}
